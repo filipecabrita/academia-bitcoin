@@ -1,0 +1,668 @@
+---
+// src/pages/test-nostr.astro
+const pageTitle = "Nostr Authentication Test";
+---
+
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>{pageTitle}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      color: #667eea;
+      margin-bottom: 0.5rem;
+      font-size: 2rem;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+    }
+    
+    .section {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    
+    h2 {
+      color: #333;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    button.secondary {
+      background: #6c757d;
+    }
+    
+    button.secondary:hover {
+      background: #5a6268;
+    }
+    
+    button.danger {
+      background: #dc3545;
+    }
+    
+    button.danger:hover {
+      background: #c82333;
+    }
+    
+    .status {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    pre {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .pubkey {
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: #e9ecef;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: #28a745;
+      color: white;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      margin-left: 0.5rem;
+    }
+    
+    .badge.offline {
+      background: #dc3545;
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      font-family: monospace;
+    }
+    
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    label {
+      font-weight: 600;
+      color: #495057;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Nostr Authentication Flow</h1>
+    <p class="subtitle">Teste completo de autenticação usando Nostr</p>
+    
+    <!-- Status de Conexão -->
+    <div class="section">
+      <h2>Status da Sessão
+        <span id="sessionBadge" class="badge offline">Desconectado</span>
+      </h2>
+      <div id="sessionInfo" class="status info">
+        Nenhuma sessão ativa. Faça login para começar.
+      </div>
+      <div id="pubkeyDisplay" style="display: none;">
+        <strong>Public Key:</strong>
+        <div class="pubkey" id="pubkeyText"></div>
+      </div>
+    </div>
+    
+    <!-- Passo 1: Login -->
+    <div class="section">
+      <h2>1️⃣ Login via Nostr</h2>
+      <p style="margin-bottom: 1rem; color: #666;">
+        Escolha um método de autenticação:
+      </p>
+      
+      <button id="checkSession" style="margin-bottom: 1rem;">
+        🔄 Verificar Sessão Existente
+      </button>
+
+      <button id="loginExtension">
+        🔌 Login com Extensão Nostr
+      </button>
+      
+      <button id="loginGenerate" class="secondary">
+        🔑 Gerar Chave Temporária
+      </button>
+      
+      <div id="loginStatus"></div>
+    </div>
+    
+    <!-- Passo 2: Criar Chave Privada (opcional) -->
+    <div class="section" id="keySection" style="display: none;">
+      <h2>2️⃣ Usar Chave Privada Específica</h2>
+      <label for="privateKeyInput">Private Key (nsec ou hex):</label>
+      <input 
+        type="text" 
+        id="privateKeyInput" 
+        placeholder="nsec1... ou hex"
+      />
+      <button id="useCustomKey" style="margin-top: 0.5rem;">
+        Usar Esta Chave
+      </button>
+    </div>
+    
+    <!-- Passo 3: Testar APIs -->
+    <div class="section">
+      <h2>3️⃣ Testar API Protegida</h2>
+      <p style="margin-bottom: 1rem; color: #666;">
+        Teste os endpoints protegidos com sua autenticação:
+      </p>
+      
+      <button id="testProtected" disabled>
+        🔒 GET /api/protected
+      </button>
+      
+      <button id="testPost" class="secondary" disabled>
+        📝 POST /api/protected/create
+      </button>
+      
+      <button id="testSession" class="secondary" disabled>
+        🍪 POST /api/auth/session (criar JWT)
+      </button>
+      
+      <div id="apiResponse"></div
+    </div>
+    
+    <!-- Passo 4: Logout -->
+    <div class="section">
+      <h2>4️⃣ Encerrar Sessão</h2>
+      <button id="logout" class="danger" disabled>
+        🚪 Logout
+      </button>
+    </div>
+    
+    <!-- Logs de Debug -->
+    <div class="section">
+      <h2>📋 Logs de Debug</h2>
+      <button id="clearLogs" class="secondary">Limpar Logs</button>
+      <pre id="debugLogs">Aguardando ações...</pre>
+    </div>
+  </div>
+
+  <script>
+    import { 
+      generateSecretKey, 
+      getPublicKey, 
+      finalizeEvent,
+      type Event 
+    } from 'nostr-tools/pure';
+    import * as nip19 from 'nostr-tools/nip19';
+
+    // Estado global
+    let currentPrivateKey: Uint8Array | null = null;
+    let currentPublicKey: string | null = null;
+    let sessionToken: string | null = null;
+    let usingExtension = false;
+
+    // Elementos DOM
+    const loginExtensionBtn = document.getElementById('loginExtension') as HTMLButtonElement;
+    const loginGenerateBtn = document.getElementById('loginGenerate') as HTMLButtonElement;
+    const useCustomKeyBtn = document.getElementById('useCustomKey') as HTMLButtonElement;
+    const privateKeyInput = document.getElementById('privateKeyInput') as HTMLInputElement;
+    const testProtectedBtn = document.getElementById('testProtected') as HTMLButtonElement;
+    const testPostBtn = document.getElementById('testPost') as HTMLButtonElement;
+    const testSessionBtn = document.getElementById('testSession') as HTMLButtonElement;
+    const logoutBtn = document.getElementById('logout') as HTMLButtonElement;
+    const clearLogsBtn = document.getElementById('clearLogs') as HTMLButtonElement;
+    
+    const sessionBadge = document.getElementById('sessionBadge')!;
+    const sessionInfo = document.getElementById('sessionInfo')!;
+    const pubkeyDisplay = document.getElementById('pubkeyDisplay')!;
+    const pubkeyText = document.getElementById('pubkeyText')!;
+    const loginStatus = document.getElementById('loginStatus')!;
+    const apiResponse = document.getElementById('apiResponse')!;
+    const debugLogs = document.getElementById('debugLogs')!;
+    const keySection = document.getElementById('keySection')!;
+
+    // Funções auxiliares
+    function log(message: string, data?: any) {
+      const timestamp = new Date().toLocaleTimeString('pt-PT');
+      let logMessage = `[${timestamp}] ${message}`;
+      
+      if (data) {
+        logMessage += '\n' + JSON.stringify(data, null, 2);
+      }
+      
+      debugLogs.textContent = logMessage + '\n\n' + debugLogs.textContent;
+      console.log(message, data || '');
+    }
+
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/check-session', { credentials: 'include' });
+        const data = await res.json();
+        console.log('Check session response:', data);
+        if (data.authenticated) {
+          document.getElementById('sessionInfo').textContent =
+            'Sessão Ativa!';
+          document.getElementById('pubkeyText')!.textContent = data.pubkey;
+          currentPublicKey = data.pubkey;
+        } else {
+          document.getElementById('sessionInfo').textContent =
+            'Nenhuma sessão encontrada!';
+        }
+      } catch (e) {
+        if(document.getElementById('sessionInfo')){
+        document.getElementById('sessionInfo').textContent =
+          'Erro a verificar sessão!';
+        }
+      }
+    }
+
+    function updateSessionUI(connected: boolean) {
+      if (connected && currentPublicKey) {
+        sessionBadge.textContent = 'Conectado';
+        sessionBadge.classList.remove('offline');
+        sessionInfo.className = 'status success';
+        sessionInfo.textContent = '✅ Autenticado com sucesso!';
+        pubkeyDisplay.style.display = 'block';
+        pubkeyText.textContent = currentPublicKey;
+        
+        testProtectedBtn.disabled = false;
+        testPostBtn.disabled = false;
+        testSessionBtn.disabled = false;
+        logoutBtn.disabled = false;
+      } else {
+        sessionBadge.textContent = 'Desconectado';
+        sessionBadge.classList.add('offline');
+        sessionInfo.className = 'status info';
+        sessionInfo.textContent = 'Nenhuma sessão ativa. Faça login para começar.';
+        pubkeyDisplay.style.display = 'none';
+        
+        testProtectedBtn.disabled = true;
+        testPostBtn.disabled = true;
+        testSessionBtn.disabled = true;
+        logoutBtn.disabled = true;
+      }
+    }
+
+    async function createNostrEvent(url: string, method: string, payload?: string): Promise<Event> {
+      const tags: string[][] = [
+        ['u', url],
+        ['method', method]
+      ];
+
+      // Adicionar hash do payload se existir
+      if (payload) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(payload);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        tags.push(['payload', hashHex]);
+      }
+
+      const eventTemplate = {
+        kind: 27235,
+        created_at: Math.floor(Date.now() / 1000),
+        tags,
+        content: '',
+        pubkey: currentPublicKey!
+      };
+
+      if (usingExtension && window.nostr) {
+        log('Assinando evento com extensão Nostr...');
+        return await window.nostr.signEvent(eventTemplate);
+      } else if (currentPrivateKey) {
+        log('Assinando evento com chave privada local...');
+        return finalizeEvent(eventTemplate, currentPrivateKey);
+      }
+
+      throw new Error('Nenhum método de assinatura disponível');
+    }
+
+    async function makeAuthenticatedRequest(url: string, method: string, body?: any) {
+      try {
+        const fullUrl = window.location.origin + url;
+        const bodyString = body ? JSON.stringify(body) : undefined;
+        
+        const event = await createNostrEvent(fullUrl, method, bodyString);
+        log(`Evento Nostr criado para ${method} ${url}:`, event);
+        
+        const encodedEvent = btoa(JSON.stringify(event));
+        
+        const response = await fetch(fullUrl, {
+          method,
+          headers: {
+            'Authorization': `Nostr ${encodedEvent}`,
+            'Content-Type': 'application/json'
+          },
+          body: bodyString
+        });
+
+        const data = await response.json();
+        
+        return { 
+          ok: response.ok, 
+          status: response.status, 
+          data 
+        };
+      } catch (error: any) {
+        log('Erro na requisição:', error);
+        throw error;
+      }
+    }
+
+    // Event Handlers
+    document.getElementById('checkSession')!.addEventListener('click', async () => {
+      log('Verificando sessão existente...');
+      await checkSession();
+    });
+
+    loginExtensionBtn.addEventListener('click', async () => {
+      try {
+        if (!window.nostr) {
+          loginStatus.innerHTML = '<div class="status error">❌ Nenhuma extensão Nostr detectada. Instale nos2x, Alby ou similar.</div>';
+          log('Extensão Nostr não encontrada');
+          return;
+        }
+
+        log('Solicitando public key da extensão...');
+        currentPublicKey = await window.nostr.getPublicKey();
+        usingExtension = true;
+        currentPrivateKey = null;
+        
+        log('Login com extensão bem-sucedido', { pubkey: currentPublicKey });
+        loginStatus.innerHTML = '<div class="status success">✅ Conectado via extensão Nostr!</div>';
+        updateSessionUI(true);
+        
+      } catch (error: any) {
+        log('Erro no login com extensão:', error);
+        loginStatus.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+      }
+    });
+
+    loginGenerateBtn.addEventListener('click', () => {
+      try {
+        log('Gerando nova chave privada...');
+        currentPrivateKey = generateSecretKey();
+        currentPublicKey = getPublicKey(currentPrivateKey);
+        usingExtension = false;
+        
+        const nsec = nip19.nsecEncode(currentPrivateKey);
+        const npub = nip19.npubEncode(currentPublicKey);
+        
+        log('Chave gerada com sucesso', { 
+          nsec: nsec.substring(0, 20) + '...', 
+          npub 
+        });
+        
+        loginStatus.innerHTML = `
+          <div class="status success">
+            ✅ Chave gerada!<br>
+            <strong>npub:</strong> ${npub}<br>
+            <strong>nsec:</strong> ${nsec.substring(0, 20)}... (veja nos logs)
+          </div>
+        `;
+        
+        updateSessionUI(true);
+        keySection.style.display = 'block';
+        
+      } catch (error: any) {
+        log('Erro ao gerar chave:', error);
+        loginStatus.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+      }
+    });
+
+    useCustomKeyBtn.addEventListener('click', () => {
+      try {
+        const input = privateKeyInput.value.trim();
+        
+        if (!input) {
+          throw new Error('Insira uma chave privada');
+        }
+
+        if (input.startsWith('nsec')) {
+          log('Decodificando nsec...');
+          const decoded = nip19.decode(input);
+          if (decoded.type !== 'nsec') {
+            throw new Error('Formato nsec inválido');
+          }
+          currentPrivateKey = decoded.data;
+        } else {
+          log('Usando chave hex...');
+          currentPrivateKey = new Uint8Array(input.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+        }
+
+        currentPublicKey = getPublicKey(currentPrivateKey);
+        usingExtension = false;
+        
+        const npub = nip19.npubEncode(currentPublicKey);
+        
+        log('Chave customizada carregada', { npub });
+        loginStatus.innerHTML = `<div class="status success">✅ Chave customizada carregada!<br><strong>npub:</strong> ${npub}</div>`;
+        updateSessionUI(true);
+        
+      } catch (error: any) {
+        log('Erro ao usar chave customizada:', error);
+        loginStatus.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+      }
+    });
+
+    testProtectedBtn.addEventListener('click', async () => {
+      try {
+        log('Testando GET /api/protected...');
+        apiResponse.innerHTML = '<div class="status info">⏳ Enviando requisição...</div>';
+        
+        const result = await makeAuthenticatedRequest('/api/protected', 'GET');
+        
+        log('Resposta recebida:', result);
+        
+        if (result.ok) {
+          apiResponse.innerHTML = `
+            <div class="status success">✅ Sucesso (${result.status})</div>
+            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+          `;
+        } else {
+          apiResponse.innerHTML = `
+            <div class="status error">❌ Erro (${result.status})</div>
+            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+          `;
+        }
+      } catch (error: any) {
+        log('Erro no teste:', error);
+        apiResponse.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+      }
+    });
+
+    testPostBtn.addEventListener('click', async () => {
+      try {
+        log('Testando POST /api/protected/create...');
+        apiResponse.innerHTML = '<div class="status info">⏳ Enviando requisição...</div>';
+        
+        const body = { 
+          message: 'Hello from Nostr!', 
+          timestamp: Date.now() 
+        };
+        
+        const result = await makeAuthenticatedRequest('/api/protected/create', 'POST', body);
+        
+        log('Resposta recebida:', result);
+        
+        if (result.ok) {
+          apiResponse.innerHTML = `
+            <div class="status success">✅ Sucesso (${result.status})</div>
+            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+          `;
+        } else {
+          apiResponse.innerHTML = `
+            <div class="status error">❌ Erro (${result.status})</div>
+            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+          `;
+        }
+      } catch (error: any) {
+        log('Erro no teste:', error);
+        apiResponse.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+      }
+    });
+
+    testSessionBtn.addEventListener('click', async () => {
+      try {
+        log('Criando sessão JWT...');
+        apiResponse.innerHTML = '<div class="status info">⏳ Criando sessão...</div>';
+        
+        const event = await createNostrEvent(
+          window.location.origin + '/api/auth/session', 
+          'POST'
+        );
+        
+        const result = await makeAuthenticatedRequest(
+          '/api/auth/session', 
+          'POST', 
+          { event }
+        );
+        
+        log('Resposta recebida:', result);
+        
+        if (result.ok) {
+          sessionToken = result.data.token;
+          apiResponse.innerHTML = `
+            <div class="status success">✅ Sessão JWT criada!</div>
+            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+          `;
+        } else {
+          apiResponse.innerHTML = `
+            <div class="status error">❌ Erro (${result.status})</div>
+            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+          `;
+        }
+      } catch (error: any) {
+        log('Erro ao criar sessão:', error);
+        apiResponse.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      log('Fazendo logout...');
+      currentPrivateKey = null;
+      currentPublicKey = null;
+      sessionToken = null;
+      usingExtension = false;
+      
+      loginStatus.innerHTML = '';
+      apiResponse.innerHTML = '';
+      privateKeyInput.value = '';
+      keySection.style.display = 'none';
+      
+      updateSessionUI(false);
+      log('Logout completo');
+    });
+
+    clearLogsBtn.addEventListener('click', () => {
+      debugLogs.textContent = 'Logs limpos. Aguardando ações...';
+    });
+
+    // Tipos para extensão Nostr
+    declare global {
+      interface Window {
+        nostr?: {
+          getPublicKey(): Promise<string>;
+          signEvent(event: any): Promise<Event>;
+        };
+      }
+    }
+
+    // Inicialização
+    log('Aplicação iniciada');
+    updateSessionUI(false);
+    window.onload = checkSession;
+  </script>
+</body>
+</html>
